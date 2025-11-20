@@ -1,0 +1,7 @@
+{
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(main)/feed/page": "app/(main)/feed/page.js",
+  "/(main)/capture/page": "app/(main)/capture/page.js",
+  "/(main)/heist/page": "app/(main)/heist/page.js",
+  "/(main)/map/page": "app/(main)/map/page.js"
+}

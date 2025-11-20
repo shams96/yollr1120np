@@ -1,0 +1,65 @@
+yollr-v6/
+├── .env.local
+├── .env.example
+├── netlify.toml
+├── next.config.ts
+├── package.json
+├── tailwind.config.ts
+├── tsconfig.json
+├── middleware.ts
+├── app/
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── (auth)/
+│   │   └── login/
+│   │       └── page.tsx
+│   ├── (onboarding)/
+│   │   └── campus/
+│   │       └── page.tsx
+│   └── (main)/
+│       ├── layout.tsx
+│       ├── feed/
+│       │   └── page.tsx
+│       ├── capture/
+│       │   └── page.tsx
+│       └── heist/
+│           └── submit/
+│               └── page.tsx
+├── components/
+│   ├── ui/
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── input.tsx
+│   │   ├── avatar.tsx
+│   │   └── checkbox.tsx
+│   ├── layout/
+│   │   ├── header.tsx
+│   │   └── bottom-nav.tsx
+│   └── features/
+│       ├── feed/
+│       │   ├── heist-card.tsx
+│       │   ├── poll-card.tsx
+│       │   ├── moment-card.tsx
+│       │   ├── leaderboard-card.tsx
+│       │   ├── map-card.tsx
+│       │   └── reaction-bar.tsx
+│       └── camera/
+│           └── camera-view.tsx
+├── lib/
+│   ├── utils.ts
+│   ├── firebase.ts
+│   └── supabase/
+│       ├── client.ts
+│       └── server.ts
+├── hooks/
+│   ├── use-campus.ts
+│   └── use-yollr-bell.ts
+├── public/
+│   ├── manifest.json
+│   └── service-worker.js
+└── supabase/
+    ├── schema.sql
+    └── functions/
+        └── heist-scheduler/
+            └── index.ts

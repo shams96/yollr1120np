@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --electric-peach: #FF7A5C;
+    --cosmic-pink: #FF5FCC;
+    --cyan-pop: #00E9FF;
+    --lime-pop: #C8FF3D;
+    --midnight: #0A0A0C;
+    --graphite: #232325;
+    --cloud: #F6F6F8;
+
+    --background: 240 10% 4%;
+    /* #0A0A0C */
+    --foreground: 240 5% 96%;
+    /* #F6F6F8 */
+
+    --card: 240 4% 14%;
+    /* #232325 */
+    --card-foreground: 240 5% 96%;
+
+    --popover: 240 4% 14%;
+    --popover-foreground: 240 5% 96%;
+
+    --primary: 10 100% 68%;
+    /* #FF7A5C */
+    --primary-foreground: 240 10% 4%;
+
+    --secondary: 185 100% 50%;
+    /* #00E9FF */
+    --secondary-foreground: 240 10% 4%;
+
+    --muted: 240 4% 14%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 319 100% 69%;
+    /* #FF5FCC */
+    --accent-foreground: 240 5% 96%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 240 5% 96%;
+
+    --border: 240 4% 20%;
+    --input: 240 4% 20%;
+    --ring: 10 100% 68%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Hide scrollbar for clean mobile feel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
