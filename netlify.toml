@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
   publish = ".next"
 
 [[plugins]]
@@ -12,3 +12,6 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[build.environment]
+  NPM_FLAGS = "--legacy-peer-deps"
