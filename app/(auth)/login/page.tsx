@@ -23,8 +23,22 @@ export default function LoginPage() {
             setLoading(false)
         }, 1000)
     }
-    <p className="text-lg text-muted-foreground">Campus Heists & Moments</p>
-            </div >
+
+    const handleVerify = async () => {
+        setLoading(true)
+        // In real app: await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' })
+        // For demo: redirect to onboarding
+        setTimeout(() => {
+            router.push("/campus")
+        }, 1000)
+    }
+
+    return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-midnight p-6 text-center">
+            <div className="mb-12 space-y-2">
+                <h1 className="text-5xl font-black tracking-tighter text-white">yollr</h1>
+                <p className="text-lg text-muted-foreground">Campus Heists & Moments</p>
+            </div>
 
             <div className="w-full max-w-sm space-y-6">
                 {step === "phone" ? (
@@ -76,6 +90,6 @@ export default function LoginPage() {
                 <br />
                 Standard rates apply.
             </p>
-        </div >
+        </div>
     )
 }
