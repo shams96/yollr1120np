@@ -1,25 +1,25 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useRouter } from "next/navigation"
-import { MapPin, School, Search } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { MapPin, School, Search } from "lucide-react";
 
 export default function CampusSelectionPage() {
-    const router = useRouter()
-    const [search, setSearch] = useState("")
+    const router = useRouter();
+    const [search, setSearch] = useState("");
 
     // Mock Data
     const nearbyCampuses = [
         { id: "1", name: "UT Austin", type: "University", distance: "0.5 mi" },
         { id: "2", name: "Austin High", type: "High School", distance: "2.1 mi" },
-    ]
+    ];
 
     const handleSelect = (id: string) => {
         // Save campus selection to user profile
-        router.push("/feed")
-    }
+        router.push("/feed");
+    };
 
     return (
         <div className="min-h-screen bg-midnight p-6 pt-12">
@@ -67,5 +67,5 @@ export default function CampusSelectionPage() {
                 />
             </div>
         </div>
-    )
+    );
 }
