@@ -7,11 +7,17 @@ import { useRouter } from "next/navigation"
 
 export function CameraView() {
     const videoRef = useRef<HTMLVideoElement>(null)
+    const previewRef = useRef<HTMLVideoElement>(null)
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+    const chunksRef = useRef<Blob[]>([])
     const [stream, setStream] = useState<MediaStream | null>(null)
     const [isRecording, setIsRecording] = useState(false)
     const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
     const [hasMultipleCameras, setHasMultipleCameras] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
+    const [recordingTime, setRecordingTime] = useState(0)
+    const timerRef = useRef<NodeJS.Timeout | null>(null)
     const router = useRouter()
 
     // Check for multiple cameras
@@ -37,9 +43,9 @@ export function CameraView() {
             const constraints = {
                 video: {
                     facingMode: facingMode,
-                    width: { ideal: 1920 }, // Request high resolution
+                    width: { ideal: 1920 },
                     height: { ideal: 1080 },
-                    aspectRatio: { ideal: 9 / 16 } // Portrait preference
+                    aspectRatio: { ideal: 9 / 16 }
                 },
                 audio: true
             }
@@ -57,25 +63,113 @@ export function CameraView() {
     }, [facingMode])
 
     useEffect(() => {
-        startCamera()
+        if (!recordedUrl) {
+            startCamera()
+        }
         return () => {
             stream?.getTracks().forEach(track => track.stop())
+            if (timerRef.current) clearInterval(timerRef.current)
         }
-    }, [startCamera])
+    }, [startCamera, recordedUrl])
 
     const toggleCamera = () => {
         setFacingMode(prev => prev === "user" ? "environment" : "user")
     }
 
-    const toggleRecording = () => {
-        setIsRecording(!isRecording)
-        // Mock recording logic for V1
-        if (!isRecording) {
-            setTimeout(() => {
-                setIsRecording(false)
-                router.push("/feed") // Mock success redirect
-            }, 3000)
+    const startRecording = () => {
+        if (!stream) return
+
+        chunksRef.current = []
+        const mediaRecorder = new MediaRecorder(stream)
+        mediaRecorderRef.current = mediaRecorder
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                chunksRef.current.push(e.data)
+            }
         }
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+            const url = URL.createObjectURL(blob)
+            setRecordedUrl(url)
+            setRecordingTime(0)
+            if (timerRef.current) clearInterval(timerRef.current)
+        }
+
+        mediaRecorder.start()
+        setIsRecording(true)
+
+        // Timer for progress
+        const startTime = Date.now()
+        timerRef.current = setInterval(() => {
+            const elapsed = (Date.now() - startTime) / 1000
+            setRecordingTime(elapsed)
+            if (elapsed >= 15) {
+                stopRecording()
+            }
+        }, 100)
+    }
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop()
+            setIsRecording(false)
+        }
+    }
+
+    const toggleRecording = () => {
+        if (isRecording) {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    const handleRetake = () => {
+        if (recordedUrl) {
+            URL.revokeObjectURL(recordedUrl)
+        }
+        setRecordedUrl(null)
+        setIsRecording(false)
+    }
+
+    const handleSave = async () => {
+        // In a real app, upload the blob to Supabase Storage here
+        // const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+        // await uploadToSupabase(blob)
+
+        router.push("/feed")
+    }
+
+    if (recordedUrl) {
+        return (
+            <div className="relative h-screen w-full bg-black">
+                <video
+                    ref={previewRef}
+                    src={recordedUrl}
+                    autoPlay
+                    loop
+                    playsInline
+                    className="h-full w-full object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-between items-center bg-gradient-to-t from-black/80 to-transparent">
+                    <Button
+                        variant="ghost"
+                        onClick={handleRetake}
+                        className="text-white hover:bg-white/20"
+                    >
+                        Retake
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        className="bg-yollr-peach hover:bg-yollr-peach/90 text-midnight font-bold px-8"
+                    >
+                        Post Moment
+                    </Button>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -103,6 +197,9 @@ export function CameraView() {
                 <Button variant="ghost" size="icon" onClick={() => router.back()} className="bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40">
                     <ArrowLeft className="h-6 w-6" />
                 </Button>
+                <div className="bg-black/20 backdrop-blur-md rounded-full px-3 py-1 text-white text-sm font-medium">
+                    {isRecording ? `${Math.ceil(15 - recordingTime)}s` : "15s"}
+                </div>
                 <Button variant="ghost" size="icon" className="bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40">
                     <Zap className="h-6 w-6" />
                 </Button>
@@ -111,17 +208,42 @@ export function CameraView() {
             {/* Bottom Controls */}
             <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 flex justify-around items-center bg-gradient-to-t from-black/80 via-black/40 to-transparent">
                 <Button variant="ghost" size="icon" className="opacity-0">
-                    {/* Spacer */}
                     <div className="h-10 w-10" />
                 </Button>
 
-                <button
-                    onClick={toggleRecording}
-                    className={`h-20 w-20 rounded-full border-[6px] border-white flex items-center justify-center transition-all duration-200 ${isRecording ? "bg-red-500 scale-110 border-red-200" : "bg-transparent hover:scale-105"
-                        }`}
-                >
-                    {isRecording && <div className="h-8 w-8 bg-white rounded-sm" />}
-                </button>
+                <div className="relative">
+                    {isRecording && (
+                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 -rotate-90 pointer-events-none">
+                            <circle
+                                cx="48"
+                                cy="48"
+                                r="46"
+                                stroke="white"
+                                strokeWidth="4"
+                                fill="none"
+                                className="opacity-30"
+                            />
+                            <circle
+                                cx="48"
+                                cy="48"
+                                r="46"
+                                stroke="#FF7A5C"
+                                strokeWidth="4"
+                                fill="none"
+                                strokeDasharray={289}
+                                strokeDashoffset={289 - (289 * recordingTime) / 15}
+                                className="transition-all duration-100 ease-linear"
+                            />
+                        </svg>
+                    )}
+                    <button
+                        onClick={toggleRecording}
+                        className={`h-20 w-20 rounded-full border-[6px] border-white flex items-center justify-center transition-all duration-200 ${isRecording ? "bg-red-500 scale-90 border-transparent" : "bg-transparent hover:scale-105"
+                            }`}
+                    >
+                        {isRecording && <div className="h-8 w-8 bg-white rounded-sm" />}
+                    </button>
+                </div>
 
                 <Button
                     variant="ghost"

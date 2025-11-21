@@ -4,44 +4,74 @@ import { HeistCard } from "@/components/features/feed/heist-card"
 import { PollCard } from "@/components/features/feed/poll-card"
 import { MomentCard } from "@/components/features/feed/moment-card"
 import { LeaderboardCard } from "@/components/features/feed/leaderboard-card"
+```javascript
+import { useState, useEffect } from "react"
+import { HeistCard } from "@/components/features/feed/heist-card"
+import { PollCard } from "@/components/features/feed/poll-card"
+import { MomentCard } from "@/components/features/feed/moment-card"
+import { LeaderboardCard } from "@/components/features/feed/leaderboard-card"
 import { MapCard } from "@/components/features/feed/map-card"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+import { useState, useEffect } from "react"
+import { createClient } from "@/utils/supabase/client"
 
 export default function FeedPage() {
-    // Mock Data
-    const activeHeist = {
-        id: "h1",
-        theme: "Library Silent Disco",
-        description: "Turn the 3rd floor into a dance floor. Headphones only. 2PM Tuesday.",
-        status: "voting"
-    }
+    const [activeHeist, setActiveHeist] = useState<any>(null)
+    const [activePoll, setActivePoll] = useState<any>(null)
+    const [moments, setMoments] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const supabase = createClient()
 
-    const activePoll = {
-        id: "p1",
-        category: "Career",
-        question: "Who should sponsor next week?",
-        options: [
-            { id: "o1", text: "Local Coffee Shop" },
-            { id: "o2", text: "Campus Bookstore" }
-        ]
-    }
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch active heist (prioritize 'voting' or 'active' status)
+                const { data: heistData } = await supabase
+                    .from('heists')
+                    .select('*, sponsor:sponsors(*)')
+                    .in('status', ['voting', 'active', 'submission'])
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single()
+                
+                if (heistData) setActiveHeist(heistData)
 
-    const moments = [
-        {
-            id: "m1",
-            user: { username: "jess_k", avatar_url: "" },
-            caption: "Silent disco prep is crazy rn 🎧",
-            thumbnail_url: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"
-        },
-        {
-            id: "m2",
-            user: { username: "mike_d", avatar_url: "" },
-            caption: "Found the secret spot for the heist!",
-            thumbnail_url: "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=800&q=80"
+                // Fetch latest active poll
+                const { data: pollData } = await supabase
+                    .from('polls')
+                    .select('*, options:poll_options(*)')
+                    .gt('expires_at', new Date().toISOString())
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single()
+                
+                if (pollData) setActivePoll(pollData)
+
+                // Fetch moments
+                const { data: momentsData } = await supabase
+                    .from('moments')
+                    .select('*, user:users(username, avatar_url)')
+                    .order('created_at', { ascending: false })
+                    .limit(20)
+                
+                if (momentsData) setMoments(momentsData)
+
+            } catch (error) {
+                console.error("Error fetching feed data:", error)
+            } finally {
+                setLoading(false)
+            }
         }
-    ]
+
+        fetchData()
+    }, [])
+
+    if (loading) {
+        return <div className="flex min-h-screen items-center justify-center text-white/50">Loading feed...</div>
+    }
 
     return (
         <div className="pb-24">
@@ -57,28 +87,26 @@ export default function FeedPage() {
 
             <div className="px-4">
                 {/* Pinned Heist */}
-                <HeistCard heist={activeHeist} />
+                {activeHeist && <HeistCard heist={activeHeist} />}
 
                 {/* Feed Items */}
-                <div className="space-y-6">
+                <div className="space-y-6 mt-6">
                     <LeaderboardCard />
-                    <PollCard poll={activePoll} />
+                    {activePoll && <PollCard poll={activePoll} />}
                     <MapCard />
 
                     {moments.map((moment) => (
                         <MomentCard key={moment.id} moment={moment} />
                     ))}
+                    
+                    {moments.length === 0 && (
+                        <div className="text-center text-white/30 py-10">
+                            <p>No moments yet. Be the first!</p>
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {/* Floating Capture Button (Alternative to Bottom Nav for 'Time to Fun') */}
-            <Link href="/capture">
-                <div className="fixed bottom-24 right-4 z-50">
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-yollr-peach to-yollr-pink flex items-center justify-center shadow-[0_0_30px_rgba(255,122,92,0.6)] animate-pulse-glow">
-                        <Plus className="h-8 w-8 text-white" />
-                    </div>
-                </div>
-            </Link>
         </div>
     )
 }
+```
