@@ -10,16 +10,16 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 
 export default function FeedPage() {
-    const [activeHeist, setActiveHeist] = useState<any>(null)
-    const [activePoll, setActivePoll] = useState<any>(null)
-    const [moments, setMoments] = useState<any[]>([])
+    const [feedItems, setFeedItems] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const supabase = createClient()
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch active heist (prioritize 'voting' or 'active' status)
+                const items = []
+
+                // 1. Fetch active heist
                 const { data: heistData } = await supabase
                     .from('heists')
                     .select('*, sponsor:sponsors(*)')
@@ -28,9 +28,11 @@ export default function FeedPage() {
                     .limit(1)
                     .single()
 
-                if (heistData) setActiveHeist(heistData)
+                if (heistData) {
+                    items.push({ type: 'heist', data: heistData, id: `heist-${heistData.id}` })
+                }
 
-                // Fetch latest active poll
+                // 2. Fetch active poll
                 const { data: pollData } = await supabase
                     .from('polls')
                     .select('*, options:poll_options(*)')
@@ -39,16 +41,45 @@ export default function FeedPage() {
                     .limit(1)
                     .single()
 
-                if (pollData) setActivePoll(pollData)
+                if (pollData) {
+                    // Insert poll after the first few moments
+                    items.push({ type: 'poll', data: pollData, id: `poll-${pollData.id}` })
+                }
 
-                // Fetch moments
+                // 3. Fetch moments
                 const { data: momentsData } = await supabase
                     .from('moments')
-                    .select('*, user:users(username, avatar_url)')
+                    .select('*, user:users(username, avatar_url), campus:campuses(name)')
                     .order('created_at', { ascending: false })
                     .limit(20)
 
-                if (momentsData) setMoments(momentsData)
+                if (momentsData) {
+                    const formattedMoments = momentsData.map(m => ({ type: 'moment', data: m, id: m.id }))
+
+                    // Interleave logic: Heist first, then moments, then poll
+                    // For V1, let's just push moments. 
+                    // In a real app, we'd splice them in.
+                    // Current order in 'items' is Heist, Poll. 
+                    // Let's make it: Heist -> Moment -> Moment -> Poll -> Rest of Moments
+
+                    const finalFeed = []
+
+                    // Add Heist if exists
+                    if (heistData) finalFeed.push({ type: 'heist', data: heistData, id: `heist-${heistData.id}` })
+
+                    // Add first 2 moments
+                    finalFeed.push(...formattedMoments.slice(0, 2))
+
+                    // Add Poll if exists
+                    if (pollData) finalFeed.push({ type: 'poll', data: pollData, id: `poll-${pollData.id}` })
+
+                    // Add rest of moments
+                    finalFeed.push(...formattedMoments.slice(2))
+
+                    setFeedItems(finalFeed)
+                } else {
+                    setFeedItems(items)
+                }
 
             } catch (error) {
                 console.error("Error fetching feed data:", error)
@@ -61,42 +92,26 @@ export default function FeedPage() {
     }, [])
 
     if (loading) {
-        return <div className="flex min-h-screen items-center justify-center text-white/50">Loading feed...</div>
+        return <div className="flex h-screen w-full items-center justify-center bg-black text-white/50">Loading...</div>
     }
 
     return (
-        <div className="pb-24">
-            {/* Deferred Profile Nudge */}
-            <div className="px-4 py-2 mb-2">
-                <div className="flex items-center justify-between bg-yollr-lime/10 rounded-full px-4 py-2 border border-yollr-lime/20">
-                    <span className="text-xs font-bold text-yollr-lime">Complete your profile to join rankings</span>
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-yollr-lime hover:text-white">
-                        Add Class Year
-                    </Button>
+        <div className="h-screen w-full bg-black overflow-y-scroll snap-y snap-mandatory no-scrollbar">
+            {feedItems.map((item) => (
+                <div key={item.id} className="h-screen w-full snap-start relative">
+                    {item.type === 'heist' && <HeistCard heist={item.data} />}
+                    {item.type === 'poll' && <PollCard poll={item.data} />}
+                    {item.type === 'moment' && <MomentCard moment={item.data} />}
                 </div>
-            </div>
+            ))}
 
-            <div className="px-4">
-                {/* Pinned Heist */}
-                {activeHeist && <HeistCard heist={activeHeist} />}
-
-                {/* Feed Items */}
-                <div className="space-y-6 mt-6">
-                    <LeaderboardCard />
-                    {activePoll && <PollCard poll={activePoll} />}
-                    <MapCard />
-
-                    {moments.map((moment) => (
-                        <MomentCard key={moment.id} moment={moment} />
-                    ))}
-
-                    {moments.length === 0 && (
-                        <div className="text-center text-white/30 py-10">
-                            <p>No moments yet. Be the first!</p>
-                        </div>
-                    )}
+            {feedItems.length === 0 && (
+                <div className="flex h-screen w-full items-center justify-center text-white/30">
+                    <p>No content yet.</p>
                 </div>
-            </div>
+            )}
+
+            {/* Bottom Nav Spacer is handled by the fixed nav, but we might need padding if nav is overlay */}
         </div>
     )
 }
