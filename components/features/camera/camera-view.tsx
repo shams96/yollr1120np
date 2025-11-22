@@ -20,6 +20,9 @@ export function CameraView() {
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const router = useRouter()
 
+    const [zoom, setZoom] = useState(1)
+    const [zoomCap, setZoomCap] = useState<{ min: number, max: number, step: number } | null>(null)
+
     // Check for multiple cameras
     useEffect(() => {
         async function checkDevices() {
@@ -45,7 +48,8 @@ export function CameraView() {
                     facingMode: facingMode,
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
-                    aspectRatio: { ideal: 9 / 16 }
+                    aspectRatio: { ideal: 9 / 16 },
+                    zoom: true // Request zoom capability
                 },
                 audio: true
             }
@@ -56,11 +60,43 @@ export function CameraView() {
                 videoRef.current.srcObject = mediaStream
             }
             setError(null)
+
+            // Check zoom capabilities
+            const videoTrack = mediaStream.getVideoTracks()[0]
+            const capabilities = videoTrack.getCapabilities() as any // Type cast for non-standard zoom
+
+            if (capabilities.zoom) {
+                setZoomCap({
+                    min: capabilities.zoom.min,
+                    max: capabilities.zoom.max,
+                    step: capabilities.zoom.step
+                })
+                setZoom(capabilities.zoom.min)
+            } else {
+                setZoomCap(null)
+            }
+
         } catch (err: any) {
             console.error("Error accessing camera:", err)
             setError("Could not access camera. Please check permissions.")
         }
     }, [facingMode])
+
+    const handleZoom = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newZoom = parseFloat(e.target.value)
+        setZoom(newZoom)
+
+        if (stream) {
+            const videoTrack = stream.getVideoTracks()[0]
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ zoom: newZoom }] as any
+                })
+            } catch (err) {
+                console.error("Error setting zoom:", err)
+            }
+        }
+    }
 
     useEffect(() => {
         if (!recordedUrl) {
@@ -204,6 +240,25 @@ export function CameraView() {
                     <Zap className="h-6 w-6" />
                 </Button>
             </div>
+
+            {/* Zoom Slider - Only show if zoom is supported */}
+            {zoomCap && (
+                <div className="absolute bottom-32 left-0 right-0 px-12 flex items-center justify-center z-20">
+                    <div className="bg-black/40 backdrop-blur-md rounded-full px-4 py-2 flex items-center space-x-2 w-full max-w-xs">
+                        <span className="text-white text-xs font-bold">1x</span>
+                        <input
+                            type="range"
+                            min={zoomCap.min}
+                            max={zoomCap.max}
+                            step={zoomCap.step}
+                            value={zoom}
+                            onChange={handleZoom}
+                            className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+                        />
+                        <span className="text-white text-xs font-bold">{zoomCap.max}x</span>
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Controls */}
             <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 flex justify-around items-center bg-gradient-to-t from-black/80 via-black/40 to-transparent">
