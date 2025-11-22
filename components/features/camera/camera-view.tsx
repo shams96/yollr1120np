@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, Zap, Video } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export function CameraView() {
@@ -171,55 +171,80 @@ export function CameraView() {
         setIsRecording(false)
     }
 
+    const searchParams = useSearchParams()
+    const mode = searchParams.get('mode') || 'moment' // 'moment' or 'heist'
+
     const handleSave = async () => {
         if (!recordedUrl || chunksRef.current.length === 0) return
 
         try {
-            // 1. Get current user and heist
             const { data: { user } } = await createClient().auth.getUser()
             if (!user) return
 
-            // For V1 demo, we'll just assume we're submitting to the active heist
-            // In real app, we'd pass the heist ID via props or context
-            const { data: heist } = await createClient()
-                .from('heists')
-                .select('id')
-                .eq('status', 'submission')
-                .single()
-
-            if (!heist) {
-                console.error("No active heist found")
-                router.push("/feed")
-                return
-            }
-
-            // 2. Upload video (Mock for now, or use Supabase Storage if bucket exists)
-            // Since we might not have storage set up, we'll use a placeholder URL
-            // In production: const { data, error } = await supabase.storage.from('heists').upload(...)
-            const videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-man-dancing-under-changing-lights-1240-large.mp4" // Demo video
+            // Common video upload logic (Mock)
+            const videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-man-dancing-under-changing-lights-1240-large.mp4"
             const thumbnailUrl = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"
 
-            // 3. Create Submission Record
-            const { error } = await createClient()
-                .from('heist_submissions')
-                .insert({
-                    heist_id: heist.id,
-                    user_id: user.id,
-                    video_url: videoUrl,
-                    thumbnail_url: thumbnailUrl,
-                    pitch_text: "Check out my heist plan! 👻",
-                    vote_count: 0
-                })
+            if (mode === 'heist') {
+                // --- HEIST FLOW ---
+                const { data: heist } = await createClient()
+                    .from('heists')
+                    .select('id')
+                    .eq('status', 'submission')
+                    .single()
 
-            if (error) throw error
+                if (!heist) {
+                    console.error("No active heist found")
+                    router.push("/feed")
+                    return
+                }
 
-            // 4. Redirect to Heist page to see submission
-            router.push("/heist")
+                const { error } = await createClient()
+                    .from('heist_submissions')
+                    .insert({
+                        heist_id: heist.id,
+                        user_id: user.id,
+                        video_url: videoUrl,
+                        thumbnail_url: thumbnailUrl,
+                        pitch_text: "Check out my heist plan! 👻",
+                        vote_count: 0
+                    })
+
+                if (error) throw error
+                router.push("/heist")
+
+            } else {
+                // --- MOMENT FLOW ---
+                // Get user's campus
+                const { data: userData } = await createClient()
+                    .from('users')
+                    .select('campus_id')
+                    .eq('id', user.id)
+                    .single()
+
+                if (!userData?.campus_id) {
+                    console.error("User has no campus")
+                    return
+                }
+
+                const { error } = await createClient()
+                    .from('moments')
+                    .insert({
+                        user_id: user.id,
+                        campus_id: userData.campus_id,
+                        video_url: videoUrl,
+                        thumbnail_url: thumbnailUrl,
+                        type: 'daily',
+                        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h expiry
+                    })
+
+                if (error) throw error
+                router.push("/feed")
+            }
 
         } catch (err) {
-            console.error("Error submitting heist:", err)
-            // Fallback
-            router.push("/heist")
+            console.error("Error saving:", err)
+            router.push("/feed")
         }
     }
 
@@ -246,7 +271,7 @@ export function CameraView() {
                         onClick={handleSave}
                         className="bg-yollr-peach hover:bg-yollr-peach/90 text-midnight font-bold px-8"
                     >
-                        Post Moment
+                        {mode === 'heist' ? 'Submit Pitch' : 'Post Moment'}
                     </Button>
                 </div>
             </div>

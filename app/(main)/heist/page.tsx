@@ -127,19 +127,4 @@ export default function HeistPage() {
                                     </div>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-midnight via-midnight/90 to-transparent">
-                <Button
-                    className="w-full h-14 text-lg font-bold bg-yollr-peach hover:bg-yollr-peach/90 text-midnight shadow-[0_0_20px_rgba(255,122,92,0.3)]"
-                    onClick={() => router.push('/capture')}
-                >
-                    Submit Pitch
-                </Button>
-            </div>
-        </div>
-    )
 }
