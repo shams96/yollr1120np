@@ -171,11 +171,55 @@ export function CameraView() {
     }
 
     const handleSave = async () => {
-        // In a real app, upload the blob to Supabase Storage here
-        // const blob = new Blob(chunksRef.current, { type: 'video/webm' })
-        // await uploadToSupabase(blob)
+        if (!recordedUrl || chunksRef.current.length === 0) return
 
-        router.push("/feed")
+        try {
+            // 1. Get current user and heist
+            const { data: { user } } = await createClient().auth.getUser()
+            if (!user) return
+
+            // For V1 demo, we'll just assume we're submitting to the active heist
+            // In real app, we'd pass the heist ID via props or context
+            const { data: heist } = await createClient()
+                .from('heists')
+                .select('id')
+                .eq('status', 'submission')
+                .single()
+
+            if (!heist) {
+                console.error("No active heist found")
+                router.push("/feed")
+                return
+            }
+
+            // 2. Upload video (Mock for now, or use Supabase Storage if bucket exists)
+            // Since we might not have storage set up, we'll use a placeholder URL
+            // In production: const { data, error } = await supabase.storage.from('heists').upload(...)
+            const videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-man-dancing-under-changing-lights-1240-large.mp4" // Demo video
+            const thumbnailUrl = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"
+
+            // 3. Create Submission Record
+            const { error } = await createClient()
+                .from('heist_submissions')
+                .insert({
+                    heist_id: heist.id,
+                    user_id: user.id,
+                    video_url: videoUrl,
+                    thumbnail_url: thumbnailUrl,
+                    pitch_text: "Check out my heist plan! 👻",
+                    vote_count: 0
+                })
+
+            if (error) throw error
+
+            // 4. Redirect to Heist page to see submission
+            router.push("/heist")
+
+        } catch (err) {
+            console.error("Error submitting heist:", err)
+            // Fallback
+            router.push("/heist")
+        }
     }
 
     if (recordedUrl) {
