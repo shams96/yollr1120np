@@ -5,6 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ReactionBar } from "./reaction-bar"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { MessageCircle, Send } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 interface MomentCardProps {
     moment: any
@@ -52,6 +56,33 @@ export function MomentCard({ moment }: MomentCardProps) {
         }
     }
 
+    const [isCommentsOpen, setIsCommentsOpen] = useState(false)
+    const [commentText, setCommentText] = useState("")
+    const [comments, setComments] = useState<any[]>([])
+
+    const handlePostComment = async () => {
+        if (!commentText.trim()) return
+
+        // Optimistic update
+        const newComment = {
+            id: Math.random().toString(),
+            text: commentText,
+            user: { username: 'You', avatar_url: '' },
+            created_at: new Date().toISOString()
+        }
+        setComments([newComment, ...comments])
+        setCommentText("")
+
+        // DB Update (Mock for now, would be 'comments' table)
+        /*
+        await supabase.from('comments').insert({
+            moment_id: moment.id,
+            text: commentText,
+            user_id: user.id
+        })
+        */
+    }
+
     return (
         <div className="relative h-full w-full bg-black">
             {/* Video/Image Background */}
@@ -77,6 +108,61 @@ export function MomentCard({ moment }: MomentCardProps) {
                     userReaction={userReaction}
                     vertical
                 />
+
+                <Sheet open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
+                    <SheetTrigger asChild>
+                        <button className="flex flex-col items-center space-y-1 group">
+                            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-black/40 border border-white/10 group-hover:bg-white/10 transition-colors">
+                                <MessageCircle className="h-6 w-6 text-white" />
+                            </div>
+                            <span className="text-[10px] font-bold text-white shadow-black drop-shadow-md">
+                                {comments.length}
+                            </span>
+                        </button>
+                    </SheetTrigger>
+                    <SheetContent side="bottom" className="h-[70vh] bg-midnight border-t-white/10 rounded-t-3xl">
+                        <SheetHeader className="mb-4">
+                            <SheetTitle className="text-white">Comments</SheetTitle>
+                        </SheetHeader>
+
+                        <div className="flex flex-col h-full pb-12">
+                            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                                {comments.length === 0 ? (
+                                    <div className="text-center text-white/40 py-8">No comments yet. Be the first!</div>
+                                ) : (
+                                    comments.map((comment) => (
+                                        <div key={comment.id} className="flex space-x-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={comment.user.avatar_url} />
+                                                <AvatarFallback>{comment.user.username[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                                <div className="flex items-baseline space-x-2">
+                                                    <span className="text-sm font-bold text-white">{comment.user.username}</span>
+                                                    <span className="text-xs text-white/40">just now</span>
+                                                </div>
+                                                <p className="text-sm text-white/80">{comment.text}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="mt-4 flex items-center space-x-2">
+                                <Input
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    placeholder="Add a comment..."
+                                    className="bg-white/5 border-white/10 text-white"
+                                    onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
+                                />
+                                <Button size="icon" onClick={handlePostComment} className="bg-yollr-cyan text-midnight hover:bg-yollr-cyan/80">
+                                    <Send className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </SheetContent>
+                </Sheet>
             </div>
 
             {/* Bottom Content */}
