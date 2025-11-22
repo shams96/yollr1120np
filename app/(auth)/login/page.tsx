@@ -26,11 +26,35 @@ export default function LoginPage() {
 
     const handleVerify = async () => {
         setLoading(true)
-        // In real app: await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' })
-        // For demo: redirect to onboarding
-        setTimeout(() => {
+
+        try {
+            // DEMO MODE: Create a random user or sign in anonymously
+            // Since we don't have SMS set up, we'll just create a random email based on the phone
+            const email = `${phone.replace(/\D/g, '')}@demo.yollr.app`
+            const password = "demo-password-123"
+
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+            })
+
+            if (error) {
+                // If user exists, try signing in
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                })
+                if (signInError) throw signInError
+            }
+
             router.push("/campus")
-        }, 1000)
+        } catch (err) {
+            console.error("Auth error:", err)
+            // Fallback for demo if auth fails (e.g. rate limit)
+            router.push("/campus")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
