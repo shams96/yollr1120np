@@ -1,15 +1,31 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Trophy, Medal } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 export function LeaderboardCard() {
-    const leaders = [
-        { rank: 1, name: "Sarah J.", xp: 2400, avatar: "" },
-        { rank: 2, name: "Mike D.", xp: 2150, avatar: "" },
-        { rank: 3, name: "Alex R.", xp: 1900, avatar: "" },
-    ]
+    const [leaders, setLeaders] = useState<any[]>([])
+    const supabase = createClient()
+
+    useEffect(() => {
+        const fetchLeaders = async () => {
+            const { data } = await supabase
+                .from('users')
+                .select('username, xp_total, avatar_url')
+                .order('xp_total', { ascending: false })
+                .limit(3)
+
+            if (data) {
+                setLeaders(data)
+            }
+        }
+        fetchLeaders()
+    }, [])
+
+    if (leaders.length === 0) return null
 
     return (
         <Card className="mb-6 border-yollr-lime/20 bg-gradient-to-br from-card to-yollr-lime/5">
@@ -25,19 +41,19 @@ export function LeaderboardCard() {
                 </div>
 
                 <div className="space-y-3">
-                    {leaders.map((leader) => (
-                        <div key={leader.rank} className="flex items-center justify-between bg-white/5 p-3 rounded-xl">
+                    {leaders.map((leader, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white/5 p-3 rounded-xl">
                             <div className="flex items-center space-x-3">
                                 <div className="flex h-6 w-6 items-center justify-center font-black italic text-white/50">
-                                    #{leader.rank}
+                                    #{index + 1}
                                 </div>
                                 <Avatar className="h-8 w-8 border border-white/10">
-                                    <AvatarImage src={leader.avatar} />
-                                    <AvatarFallback>{leader.name[0]}</AvatarFallback>
+                                    <AvatarImage src={leader.avatar_url} />
+                                    <AvatarFallback>{leader.username?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                                 </Avatar>
-                                <span className="font-bold text-sm text-white">{leader.name}</span>
+                                <span className="font-bold text-sm text-white">{leader.username || 'Anonymous'}</span>
                             </div>
-                            <span className="text-xs font-mono text-yollr-lime">{leader.xp} XP</span>
+                            <span className="text-xs font-mono text-yollr-lime">{leader.xp_total || 0} XP</span>
                         </div>
                     ))}
                 </div>

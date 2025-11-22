@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, Zap, Video } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/components/ui/use-toast"
 
 export function CameraView() {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -20,6 +21,7 @@ export function CameraView() {
     const [recordingTime, setRecordingTime] = useState(0)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const router = useRouter()
+    const { toast } = useToast()
 
     const [zoom, setZoom] = useState(1)
     const [zoomCap, setZoomCap] = useState<{ min: number, max: number, step: number } | null>(null)
@@ -206,180 +208,141 @@ export function CameraView() {
                         user_id: user.id,
                         video_url: videoUrl,
                         thumbnail_url: thumbnailUrl,
-                        pitch_text: "Check out my heist plan! 👻",
-                        vote_count: 0
-                    })
+                    }
+    }
 
-                if (error) throw error
-                router.push("/heist")
-
-            } else {
-                // --- MOMENT FLOW ---
-                // Get user's campus
-                const { data: userData } = await createClient()
-                    .from('users')
-                    .select('campus_id')
-                    .eq('id', user.id)
-                    .single()
-
-                if (!userData?.campus_id) {
-                    console.error("User has no campus")
-                    return
-                }
-
-                const { error } = await createClient()
-                    .from('moments')
-                    .insert({
-                        user_id: user.id,
-                        campus_id: userData.campus_id,
-                        video_url: videoUrl,
-                        thumbnail_url: thumbnailUrl,
-                        type: 'daily',
-                        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h expiry
-                    })
-
-                if (error) throw error
-                router.push("/feed")
+            if (recordedUrl) {
+                return (
+                    <div className="relative h-screen w-full bg-black">
+                        <video
+                            ref={previewRef}
+                            src={recordedUrl}
+                            autoPlay
+                            loop
+                            playsInline
+                            className="h-full w-full object-cover"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-between items-center bg-gradient-to-t from-black/80 to-transparent">
+                            <Button
+                                variant="ghost"
+                                onClick={handleRetake}
+                                className="text-white hover:bg-white/20"
+                            >
+                                Retake
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                className="bg-yollr-peach hover:bg-yollr-peach/90 text-midnight font-bold px-8"
+                            >
+                                {mode === 'heist' ? 'Submit Pitch' : 'Post Moment'}
+                            </Button>
+                        </div>
+                    </div>
+                )
             }
 
-        } catch (err) {
-            console.error("Error saving:", err)
-            router.push("/feed")
-        }
-    }
-
-    if (recordedUrl) {
-        return (
-            <div className="relative h-screen w-full bg-black">
-                <video
-                    ref={previewRef}
-                    src={recordedUrl}
-                    autoPlay
-                    loop
-                    playsInline
-                    className="h-full w-full object-cover"
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-between items-center bg-gradient-to-t from-black/80 to-transparent">
-                    <Button
-                        variant="ghost"
-                        onClick={handleRetake}
-                        className="text-white hover:bg-white/20"
-                    >
-                        Retake
-                    </Button>
-                    <Button
-                        onClick={handleSave}
-                        className="bg-yollr-peach hover:bg-yollr-peach/90 text-midnight font-bold px-8"
-                    >
-                        {mode === 'heist' ? 'Submit Pitch' : 'Post Moment'}
-                    </Button>
-                </div>
-            </div>
-        )
-    }
-
-    return (
-        <div className="relative h-screen w-full bg-black overflow-hidden">
-            {error ? (
-                <div className="flex h-full items-center justify-center text-white p-6 text-center">
-                    <div>
-                        <Video className="h-12 w-12 mx-auto mb-4 text-red-500" />
-                        <p>{error}</p>
-                        <Button onClick={startCamera} className="mt-4" variant="outline">Retry</Button>
-                    </div>
-                </div>
-            ) : (
-                <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`h-full w-full object-cover transition-transform duration-500 ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
-                />
-            )}
-
-            {/* Top Controls */}
-            <div className="absolute top-0 left-0 right-0 p-4 pt-safe flex justify-between items-center z-10 bg-gradient-to-b from-black/40 to-transparent">
-                <Button variant="ghost" size="icon" onClick={() => router.back()} className="bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40">
-                    <ArrowLeft className="h-6 w-6" />
-                </Button>
-                <div className="bg-black/20 backdrop-blur-md rounded-full px-3 py-1 text-white text-sm font-medium">
-                    {isRecording ? `${Math.ceil(15 - recordingTime)}s` : "15s"}
-                </div>
-                <Button variant="ghost" size="icon" className="bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40">
-                    <Zap className="h-6 w-6" />
-                </Button>
-            </div>
-
-            {/* Zoom Slider - Only show if zoom is supported */}
-            {zoomCap && (
-                <div className="absolute bottom-32 left-0 right-0 px-12 flex items-center justify-center z-20">
-                    <div className="bg-black/40 backdrop-blur-md rounded-full px-4 py-2 flex items-center space-x-2 w-full max-w-xs">
-                        <span className="text-white text-xs font-bold">1x</span>
-                        <input
-                            type="range"
-                            min={zoomCap.min}
-                            max={zoomCap.max}
-                            step={zoomCap.step}
-                            value={zoom}
-                            onChange={handleZoom}
-                            className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+            return (
+                <div className="relative h-screen w-full bg-black overflow-hidden">
+                    {error ? (
+                        <div className="flex h-full items-center justify-center text-white p-6 text-center">
+                            <div>
+                                <Video className="h-12 w-12 mx-auto mb-4 text-red-500" />
+                                <p>{error}</p>
+                                <Button onClick={startCamera} className="mt-4" variant="outline">Retry</Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={`h-full w-full object-cover transition-transform duration-500 ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                         />
-                        <span className="text-white text-xs font-bold">{zoomCap.max}x</span>
+                    )}
+
+                    {/* Top Controls */}
+                    <div className="absolute top-0 left-0 right-0 p-4 pt-safe flex justify-between items-center z-10 bg-gradient-to-b from-black/40 to-transparent">
+                        <Button variant="ghost" size="icon" onClick={() => router.back()} className="bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40">
+                            <ArrowLeft className="h-6 w-6" />
+                        </Button>
+                        <div className="bg-black/20 backdrop-blur-md rounded-full px-3 py-1 text-white text-sm font-medium">
+                            {isRecording ? `${Math.ceil(15 - recordingTime)}s` : "15s"}
+                        </div>
+                        <Button variant="ghost" size="icon" className="bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40">
+                            <Zap className="h-6 w-6" />
+                        </Button>
+                    </div>
+
+                    {/* Zoom Slider - Only show if zoom is supported */}
+                    {zoomCap && (
+                        <div className="absolute bottom-32 left-0 right-0 px-12 flex items-center justify-center z-20">
+                            <div className="bg-black/40 backdrop-blur-md rounded-full px-4 py-2 flex items-center space-x-2 w-full max-w-xs">
+                                <span className="text-white text-xs font-bold">1x</span>
+                                <input
+                                    type="range"
+                                    min={zoomCap.min}
+                                    max={zoomCap.max}
+                                    step={zoomCap.step}
+                                    value={zoom}
+                                    onChange={handleZoom}
+                                    className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+                                />
+                                <span className="text-white text-xs font-bold">{zoomCap.max}x</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bottom Controls */}
+                    <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 flex justify-around items-center bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                        <Button variant="ghost" size="icon" className="opacity-0">
+                            <div className="h-10 w-10" />
+                        </Button>
+
+                        <div className="relative">
+                            {isRecording && (
+                                <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 -rotate-90 pointer-events-none">
+                                    <circle
+                                        cx="48"
+                                        cy="48"
+                                        r="46"
+                                        stroke="white"
+                                        strokeWidth="4"
+                                        fill="none"
+                                        className="opacity-30"
+                                    />
+                                    <circle
+                                        cx="48"
+                                        cy="48"
+                                        r="46"
+                                        stroke="#FF7A5C"
+                                        strokeWidth="4"
+                                        fill="none"
+                                        strokeDasharray={289}
+                                        strokeDashoffset={289 - (289 * recordingTime) / 15}
+                                        className="transition-all duration-100 ease-linear"
+                                    />
+                                </svg>
+                            )}
+                            <button
+                                onClick={toggleRecording}
+                                className={`h-20 w-20 rounded-full border-[6px] border-white flex items-center justify-center transition-all duration-200 ${isRecording ? "bg-red-500 scale-90 border-transparent" : "bg-transparent hover:scale-105"
+                                    }`}
+                            >
+                                {isRecording && <div className="h-8 w-8 bg-white rounded-sm" />}
+                            </button>
+                        </div>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleCamera}
+                            disabled={!hasMultipleCameras}
+                            className={`bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-opacity ${!hasMultipleCameras ? 'opacity-50' : ''}`}
+                        >
+                            <RefreshCw className="h-6 w-6" />
+                        </Button>
                     </div>
                 </div>
-            )}
-
-            {/* Bottom Controls */}
-            <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 flex justify-around items-center bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                <Button variant="ghost" size="icon" className="opacity-0">
-                    <div className="h-10 w-10" />
-                </Button>
-
-                <div className="relative">
-                    {isRecording && (
-                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 -rotate-90 pointer-events-none">
-                            <circle
-                                cx="48"
-                                cy="48"
-                                r="46"
-                                stroke="white"
-                                strokeWidth="4"
-                                fill="none"
-                                className="opacity-30"
-                            />
-                            <circle
-                                cx="48"
-                                cy="48"
-                                r="46"
-                                stroke="#FF7A5C"
-                                strokeWidth="4"
-                                fill="none"
-                                strokeDasharray={289}
-                                strokeDashoffset={289 - (289 * recordingTime) / 15}
-                                className="transition-all duration-100 ease-linear"
-                            />
-                        </svg>
-                    )}
-                    <button
-                        onClick={toggleRecording}
-                        className={`h-20 w-20 rounded-full border-[6px] border-white flex items-center justify-center transition-all duration-200 ${isRecording ? "bg-red-500 scale-90 border-transparent" : "bg-transparent hover:scale-105"
-                            }`}
-                    >
-                        {isRecording && <div className="h-8 w-8 bg-white rounded-sm" />}
-                    </button>
-                </div>
-
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleCamera}
-                    disabled={!hasMultipleCameras}
-                    className={`bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-opacity ${!hasMultipleCameras ? 'opacity-50' : ''}`}
-                >
-                    <RefreshCw className="h-6 w-6" />
-                </Button>
-            </div>
-        </div>
-    )
-}
+            )
+        }

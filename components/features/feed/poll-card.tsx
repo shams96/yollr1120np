@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useToast } from "@/components/ui/use-toast"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
@@ -11,6 +12,7 @@ interface PollCardProps {
 }
 
 export function PollCard({ poll }: PollCardProps) {
+    const { toast } = useToast()
     const [votedOption, setVotedOption] = useState<string | null>(null)
     const [options, setOptions] = useState(poll.options)
 
@@ -28,6 +30,12 @@ export function PollCard({ poll }: PollCardProps) {
             }
             return opt
         }))
+
+        toast({
+            title: "Vote Cast! 🗳️",
+            description: "+10 XP",
+            className: "bg-yollr-lime text-midnight border-none font-bold"
+        })
 
         // In a real app, we'd call Supabase here:
         // await supabase.from('poll_votes').insert(...)
