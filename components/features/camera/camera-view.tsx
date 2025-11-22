@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, Zap, Video } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 export function CameraView() {
     const videoRef = useRef<HTMLVideoElement>(null)
