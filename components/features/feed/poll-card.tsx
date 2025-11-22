@@ -12,6 +12,27 @@ interface PollCardProps {
 
 export function PollCard({ poll }: PollCardProps) {
     const [votedOption, setVotedOption] = useState<string | null>(null)
+    const [options, setOptions] = useState(poll.options)
+
+    const totalVotes = options.reduce((acc: number, opt: any) => acc + (opt.vote_count || 0), 0)
+
+    const handleVote = (optionId: string) => {
+        if (votedOption) return // Prevent double voting in this session
+
+        setVotedOption(optionId)
+
+        // Optimistically update UI
+        setOptions(options.map((opt: any) => {
+            if (opt.id === optionId) {
+                return { ...opt, vote_count: (opt.vote_count || 0) + 1 }
+            }
+            return opt
+        }))
+
+        // In a real app, we'd call Supabase here:
+        // await supabase.from('poll_votes').insert(...)
+        // await supabase.rpc('increment_poll_vote', { option_id: optionId })
+    }
 
     return (
         <div className="h-full w-full relative bg-midnight overflow-hidden flex flex-col items-center justify-center p-6">
@@ -27,14 +48,16 @@ export function PollCard({ poll }: PollCardProps) {
                     <h2 className="text-3xl font-black text-white leading-tight drop-shadow-xl">
                         {poll.question}
                     </h2>
-                    <p className="text-white/60 text-sm">1.5k votes • Ends in 2h</p>
+                    <p className="text-white/60 text-sm">{totalVotes} votes • Ends in 2h</p>
                 </div>
 
                 {/* Options */}
                 <div className="space-y-4">
-                    {poll.options.map((opt: any) => {
+                    {options.map((opt: any) => {
                         const isSelected = votedOption === opt.id
-                        const percent = 45 // Mock percentage
+                        const votes = opt.vote_count || 0
+                        // Calculate percentage, default to 0 if no votes
+                        const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0
 
                         return (
                             <div key={opt.id} className="relative group">
@@ -48,7 +71,8 @@ export function PollCard({ poll }: PollCardProps) {
                                 )}
 
                                 <button
-                                    onClick={() => setVotedOption(opt.id)}
+                                    onClick={() => handleVote(opt.id)}
+                                    disabled={!!votedOption}
                                     className={cn(
                                         "relative z-10 w-full flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-200",
                                         isSelected
