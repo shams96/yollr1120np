@@ -46,7 +46,10 @@ export function HeistCard({ heist }: HeistCardProps) {
 
                 {/* CTA */}
                 <div className="absolute bottom-24 left-0 right-0 px-8">
-                    <Button className="w-full h-16 text-xl font-black bg-yollr-lime text-midnight hover:bg-yollr-lime/90 rounded-2xl shadow-[0_0_40px_rgba(200,255,61,0.3)] transition-transform hover:scale-105 active:scale-95">
+                    <Button
+                        onClick={() => window.location.href = '/heist'} // Using window.location for simplicity or pass router
+                        className="w-full h-16 text-xl font-black bg-yollr-lime text-midnight hover:bg-yollr-lime/90 rounded-2xl shadow-[0_0_40px_rgba(200,255,61,0.3)] transition-transform hover:scale-105 active:scale-95"
+                    >
                         JOIN THE HEIST
                     </Button>
                     <p className="mt-4 text-sm text-white/40 flex items-center justify-center">

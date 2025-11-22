@@ -1,7 +1,12 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(main)/feed/page": "app/(main)/feed/page.js",
+  "/page": "app/page.js",
+  "/(onboarding)/campus/page": "app/(onboarding)/campus/page.js",
   "/(main)/capture/page": "app/(main)/capture/page.js",
+  "/(main)/feed/page": "app/(main)/feed/page.js",
+  "/(main)/map/page": "app/(main)/map/page.js",
+  "/(main)/profile/page": "app/(main)/profile/page.js",
   "/(main)/heist/page": "app/(main)/heist/page.js",
-  "/(main)/map/page": "app/(main)/map/page.js"
+  "/(main)/heist/submit/page": "app/(main)/heist/submit/page.js"
 }
